@@ -1,0 +1,81 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# Single source of truth for tool versions
+env:
+  GO_VERSION: '1.25'
+  GOLANGCI_LINT_VERSION: 'v2.4.0'
+
+jobs:
+  dis-vulncheck-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Generate Go Module List
+        run: go list -json -m all > go.list
+      - name: Run Go audit check with Nancy
+        uses: sonatype-nexus-community/nancy-github-action@main
+        with:
+          nancyVersion: "v1.0.36"
+      - name: Install go-vulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: Install dis-vulncheck
+        run: make install
+      - name: Run dis-vulncheck
+        run: make audit-vulncheck
+
+  dis-vulncheck-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Run Go lint checks
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          install-mode: go
+
+  dis-vulncheck-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Run Go unit tests
+        run: make test
+
+  dis-vulncheck-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: Run Go build test
+        run: make build

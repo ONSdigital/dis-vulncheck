@@ -1,0 +1,18 @@
+/build
+.go/
+
+# Mac
+.DS_Store
+
+#VSCode
+.vscode
+
+# Intellij
+.idea/
+*.iml
+*.iws
+
+# Package Files #
+*.zip
+*.tar.gz
+*.rar

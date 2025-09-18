@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"time"
 
 	"github.com/ONSdigital/dis-vulncheck/config"
 	"github.com/ONSdigital/dis-vulncheck/output"
 	"github.com/ONSdigital/log.go/v2/log"
+	"github.com/briandowns/spinner"
 )
 
 var (
@@ -214,11 +216,18 @@ func runGoVulncheckReport(ctx context.Context, cfg *config.Config) (GoVulncheckR
 		cmd = fmt.Sprintf("GOTOOLCHAIN=%s %s", cfg.GoToolChain, cmd)
 	}
 
+	s := spinner.New(spinner.CharSets[36], 100*time.Millisecond)
+	s.Prefix = "Analysing code..."
+	s.Start()
+
 	cmdOutput, err := execCommand(ctx, cmd, ".")
 	if err != nil {
 		log.Error(ctx, "not able to run govulncheck", err)
+		s.Stop()
 		return GoVulncheckReport{}, fmt.Errorf("not able to run govulncheck: %v", err)
 	}
+
+	s.Stop()
 
 	var report GoVulncheckReport
 

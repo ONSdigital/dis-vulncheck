@@ -115,7 +115,7 @@ func TestReportGeneration(t *testing.T) {
 }
 
 func TestReportRendering(t *testing.T) {
-	Convey("Given a disvulncheck report", t, func() {
+	Convey("Given a disvulncheck report with all types of results", t, func() {
 		ctx := context.Background()
 
 		vcreport := VulnerabilityReport{
@@ -155,16 +155,18 @@ func TestReportRendering(t *testing.T) {
 		Convey("When the text report is retrieved", func() {
 			reportOutput := vcreport.GetTextReport(ctx)
 
-			So(strings.Contains(reportOutput, "go1.24.1"), ShouldBeTrue)
-			So(strings.Contains(reportOutput, "Audit has failed"), ShouldBeTrue)
-			So(strings.Contains(reportOutput, "1 ignored"), ShouldBeTrue)
-			So(strings.Contains(reportOutput, "1 not affected"), ShouldBeTrue)
-			So(strings.Contains(reportOutput, "1 failure"), ShouldBeTrue)
-			for i := range vcreport.Statements {
-				So(strings.Contains(reportOutput, vcreport.Statements[i].Metadata.Description), ShouldBeTrue)
-				So(strings.Contains(reportOutput, vcreport.Statements[i].Metadata.ID), ShouldBeTrue)
-				So(strings.Contains(reportOutput, vcreport.Statements[i].Metadata.Name), ShouldBeTrue)
-			}
+			Convey("Then the output contains the data expected in the report", func() {
+				So(strings.Contains(reportOutput, "go1.24.1"), ShouldBeTrue)
+				So(strings.Contains(reportOutput, "Audit has failed"), ShouldBeTrue)
+				So(strings.Contains(reportOutput, "1 ignored"), ShouldBeTrue)
+				So(strings.Contains(reportOutput, "1 not affected"), ShouldBeTrue)
+				So(strings.Contains(reportOutput, "1 failure"), ShouldBeTrue)
+				for i := range vcreport.Statements {
+					So(strings.Contains(reportOutput, vcreport.Statements[i].Metadata.Description), ShouldBeTrue)
+					So(strings.Contains(reportOutput, vcreport.Statements[i].Metadata.ID), ShouldBeTrue)
+					So(strings.Contains(reportOutput, vcreport.Statements[i].Metadata.Name), ShouldBeTrue)
+				}
+			})
 		})
 	})
 }

@@ -210,7 +210,13 @@ func runGoVulncheckReport(ctx context.Context, cfg *config.Config) (GoVulncheckR
 	}
 	sInstall.Stop()
 
-	cmd := "govulncheck -format openvex ./..."
+	cmd := "govulncheck"
+
+	if cfg.BuildTags != "" {
+		cmd = fmt.Sprintf("%s -tags=%s", cmd, cfg.BuildTags)
+	}
+
+	cmd = fmt.Sprintf("%s -format openvex ./...", cmd)
 
 	if cfg.GoToolChain != "" {
 		cmd = fmt.Sprintf("GOTOOLCHAIN=%s %s", cfg.GoToolChain, cmd)

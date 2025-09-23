@@ -62,8 +62,9 @@ To run dis-vulncheck:
 
 You can use two different flags against dis-vulncheck:
 
-- `--verbose` will add full logging output
+- `--build-tags` will pass this down to the underlying govulncheck scan
 - `--config` can supply a string filepath for your config file
+- `--verbose` will add full logging output
 
 ## What it checks against
 

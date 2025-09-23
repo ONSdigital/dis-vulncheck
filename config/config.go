@@ -15,6 +15,7 @@ import (
 )
 
 type CliArgs struct {
+	BuildTags      string `json:"build-tags,omitempty"`
 	ConfigFilePath string `json:"config,omitempty"`
 	Verbose        bool   `json:"verbose,omitempty"`
 }
@@ -25,6 +26,7 @@ type UserConfig struct {
 }
 
 type Config struct {
+	BuildTags   string
 	GoToolChain string
 	UserConfig  *UserConfig
 }
@@ -163,6 +165,7 @@ func getUserConfig(ctx context.Context, cliArgs *CliArgs, fs afero.Fs) (*UserCon
 func GetCliArgs() *CliArgs {
 	var cliArgs CliArgs
 
+	flag.StringVar(&cliArgs.BuildTags, "build-tags", "", "build tags for govulncheck")
 	flag.StringVar(&cliArgs.ConfigFilePath, "config", "", "config filepath")
 	flag.BoolVar(&cliArgs.Verbose, "verbose", false, "run tool in verbose mode or not")
 	flag.Parse()
@@ -181,6 +184,7 @@ func Get(ctx context.Context, cliArgs *CliArgs, fs afero.Fs) (*Config, error) {
 	goToolchain := getGoToolChain(ctx, userConfig, fs)
 
 	cfg := Config{
+		cliArgs.BuildTags,
 		goToolchain,
 		userConfig,
 	}

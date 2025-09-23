@@ -74,7 +74,6 @@ toolchain: go1.24.1
 			So(err, ShouldBeNil)
 
 			Convey("Then the values should be set as appropriate", func() {
-				So(cfg.GoToolChain, ShouldEqual, "go1.24.1")
 				So(cfg.UserConfig.Ignore[0], ShouldEqual, config.IgnoreStatement{ID: "GO-2025-3563", Reason: "This is a reason why it should be ignored"})
 			})
 		})
@@ -89,7 +88,6 @@ toolchain: go1.24.1
 			So(err, ShouldBeNil)
 
 			Convey("Then the values should be set as default", func() {
-				So(cfg.GoToolChain, ShouldEqual, "")
 				So(cfg.UserConfig.Ignore, ShouldBeEmpty)
 			})
 		})
@@ -112,83 +110,4 @@ toolchain: go1.24.1
 		})
 	})
 
-	Convey("Given a ci build yml with a go toolchain declaration", t, func() {
-		ctx := context.Background()
-		fs := afero.NewMemMapFs()
-
-		// The indentation is off here due to the way that yaml deals with whitespace.
-		buildFileContent := `
----
-image_resource:
-  type: docker-image
-  source:
-    repository: golang
-    tag: 1.24.6-bookworm
-`
-
-		afero.WriteFile(fs, "./ci/build.yml", []byte(buildFileContent), 0644)
-
-		Convey("When the config is retrieved", func() {
-			cfg, err := config.Get(ctx, &config.CliArgs{}, fs)
-			So(err, ShouldBeNil)
-
-			Convey("Then the go toolchain should be picked up", func() {
-				So(cfg.GoToolChain, ShouldEqual, "go1.24.6")
-			})
-		})
-	})
-
-	Convey("Given an invalid go build yaml", t, func() {
-		ctx := context.Background()
-		fs := afero.NewMemMapFs()
-
-		// The indentation is off here due to the way that yaml deals with whitespace.
-		buildFileContent := `
----
-garbage
-`
-
-		afero.WriteFile(fs, "./ci/build.yml", []byte(buildFileContent), 0644)
-
-		Convey("When the config is retrieved", func() {
-			cfg, err := config.Get(ctx, &config.CliArgs{}, fs)
-
-			Convey("Then no error should be returned", func() {
-				So(err, ShouldBeNil)
-			})
-
-			Convey("And no toolchain should be set", func() {
-				So(cfg.GoToolChain, ShouldBeEmpty)
-			})
-		})
-	})
-
-	Convey("Given a go build yaml with no tag", t, func() {
-		ctx := context.Background()
-		fs := afero.NewMemMapFs()
-
-		// The indentation is off here due to the way that yaml deals with whitespace.
-		buildFileContent := `
----
-image_resource:
-  type: docker-image
-  source:
-    repository: golang
-    tag: bookworm
-`
-
-		afero.WriteFile(fs, "./ci/build.yml", []byte(buildFileContent), 0644)
-
-		Convey("When the config is retrieved", func() {
-			cfg, err := config.Get(ctx, &config.CliArgs{}, fs)
-
-			Convey("Then no error should be returned", func() {
-				So(err, ShouldBeNil)
-			})
-
-			Convey("And no toolchain should be set", func() {
-				So(cfg.GoToolChain, ShouldBeEmpty)
-			})
-		})
-	})
 }

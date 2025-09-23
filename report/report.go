@@ -24,7 +24,6 @@ type VulnerabilityReport struct {
 	Statements    []VulnerabilityStatement `json:"statements"`
 	Results       VulnerabilityResults     `json:"results"`
 	FailedIgnores []config.IgnoreStatement `json:"failed_ignores"`
-	GoToolchain   string                   `json:"toolchain"`
 }
 
 type VulnerabilityResults struct {
@@ -53,7 +52,6 @@ type VulnerabilityStatement struct {
 // using the configuration to manipulate the report in transit
 func NewVulnerabilityReport(ctx context.Context, cfg *config.Config, govulncheckReport GoVulncheckReport) *VulnerabilityReport {
 	report := new(VulnerabilityReport)
-	report.GoToolchain = cfg.GoToolChain
 	report.Statements = govulncheckReport.Statements
 
 	if cfg.UserConfig != nil && cfg.UserConfig.Ignore != nil {
@@ -133,8 +131,6 @@ func (v *VulnerabilityReport) renderReportHeader(b *bytes.Buffer) {
 	b.WriteString("/*  Vulnerability report  */\n")
 	b.WriteString("/**************************/\n")
 	b.WriteString("\n")
-	fmt.Fprintf(b, "Go Toolchain used: %s\n", v.GoToolchain)
-	b.WriteString("\n")
 
 	if v.Results.Failures > 0 {
 		b.WriteString(output.ErrorSprintf("Audit has failed\n"))
@@ -189,10 +185,6 @@ func Generate(ctx context.Context, cfg *config.Config) (*VulnerabilityReport, er
 // TODO: Abstract this behind a cmd interface for better testing.
 func runGoVulncheckReport(ctx context.Context, cfg *config.Config) (GoVulncheckReport, error) {
 	cmd := "govulncheck -format openvex ./..."
-
-	if cfg.GoToolChain != "" {
-		cmd = fmt.Sprintf("GOTOOLCHAIN=%s %s", cfg.GoToolChain, cmd)
-	}
 
 	s := spinner.New(spinner.CharSets[36], 100*time.Millisecond)
 	s.Prefix = "Analysing code..."

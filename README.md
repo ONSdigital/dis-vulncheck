@@ -44,10 +44,6 @@ ignore:
         description: "A reason why this vulnerability has been excluded from auditing"
         example: "This doesn't affect our application"
         type: string
-toolchain:
-  description: "An optional toolchain directive to override the default"
-  example: "go1.25.0"
-  type: string
 ```
 
 ## Running
@@ -67,18 +63,4 @@ You can use two different flags against dis-vulncheck:
 
 ## What it checks against
 
-By default, dis-vulncheck will inspect the CI build yml (`/ci/build.yml`) to retrieve the version of Go it will be built with.
-
-e.g.
-
-```yml
-image_resource:
-  type: docker-image
-  source:
-    repository: golang
-    tag: 1.24.6-bookworm
-```
-
-In this case it will extract "1.24.6" and set this as the `GOTOOLCHAIN` when running `govulncheck`. This is to ensure consistency between CI and local environments.
-
-If this is not found it will default to the Go version found in the local environment, or can be overriden through the [config file](#configuration).
+By default, dis-vulncheck will get the gotoolchain from the local environment. In future we will look to allow user setting of this.

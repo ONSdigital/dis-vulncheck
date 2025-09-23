@@ -119,7 +119,6 @@ func TestReportRendering(t *testing.T) {
 		ctx := context.Background()
 
 		vcreport := VulnerabilityReport{
-			GoToolchain: "go1.24.1",
 			Results: VulnerabilityResults{
 				Ignored:     1,
 				Failures:    1,

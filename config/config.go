@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ONSdigital/dis-vulncheck/output"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/goccy/go-yaml"
 	"github.com/spf13/afero"
@@ -20,13 +19,11 @@ type CliArgs struct {
 }
 
 type UserConfig struct {
-	Ignore      []IgnoreStatement `yaml:"ignore"`
-	GoToolChain string            `yaml:"toolchain"`
+	Ignore []IgnoreStatement `yaml:"ignore"`
 }
 
 type Config struct {
-	GoToolChain string
-	UserConfig  *UserConfig
+	UserConfig *UserConfig
 }
 
 type IgnoreStatement struct {
@@ -44,28 +41,6 @@ var (
 	}
 	defaultCIBuildFilePath = "./ci/build.yml"
 )
-
-func getGoToolChain(ctx context.Context, userCfg *UserConfig, fs afero.Fs) string {
-	CIBuildVersion, err := getCIGoBuildVersion(ctx, defaultCIBuildFilePath, fs)
-	if err != nil {
-		log.Error(ctx, "couldn't load build version from CI files - allowing Go toolchain to default", err)
-	}
-
-	if userCfg.GoToolChain != "" {
-		if CIBuildVersion != "" {
-			message := fmt.Sprintf(
-				"You have overridden the Go toolchain version - your config file is set to %s but the build version is %s",
-				userCfg.GoToolChain,
-				CIBuildVersion,
-			)
-			output.Warn(message)
-		}
-
-		return userCfg.GoToolChain
-	}
-
-	return CIBuildVersion
-}
 
 func getCIGoBuildVersion(ctx context.Context, filepath string, fs afero.Fs) (string, error) {
 	var ciBuild struct {
@@ -178,10 +153,7 @@ func Get(ctx context.Context, cliArgs *CliArgs, fs afero.Fs) (*Config, error) {
 		return nil, fmt.Errorf("unable to load config: %v", err)
 	}
 
-	goToolchain := getGoToolChain(ctx, userConfig, fs)
-
 	cfg := Config{
-		goToolchain,
 		userConfig,
 	}
 

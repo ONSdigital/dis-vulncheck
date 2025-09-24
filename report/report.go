@@ -205,8 +205,13 @@ func runGoVulncheckReport(ctx context.Context, cfg *config.Config) (GoVulncheckR
 
 	_, err := execCommand(ctx, installCmd, ".")
 	if err != nil {
+		sInstall.Stop()
 		log.Error(ctx, "not able to install govulncheck", err)
-		return GoVulncheckReport{}, fmt.Errorf("not able to install govulncheck: %v", err)
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return GoVulncheckReport{}, fmt.Errorf("not able to install govulncheck: %v", string(exitErr.Stderr))
+		} else {
+			return GoVulncheckReport{}, fmt.Errorf("not able to install govulncheck: %v", err)
+		}
 	}
 	sInstall.Stop()
 
@@ -228,9 +233,13 @@ func runGoVulncheckReport(ctx context.Context, cfg *config.Config) (GoVulncheckR
 
 	cmdOutput, err := execCommand(ctx, cmd, ".")
 	if err != nil {
-		log.Error(ctx, "not able to run govulncheck", err)
 		s.Stop()
-		return GoVulncheckReport{}, fmt.Errorf("not able to run govulncheck: %v", err)
+		log.Error(ctx, "not able to run govulncheck", err)
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return GoVulncheckReport{}, fmt.Errorf("not able to run govulncheck: %v", string(exitErr.Stderr))
+		} else {
+			return GoVulncheckReport{}, fmt.Errorf("not able to run govulncheck: %v", err)
+		}
 	}
 
 	s.Stop()

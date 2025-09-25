@@ -188,7 +188,6 @@ func renderProducts(b *bytes.Buffer, products []Product) {
 		fmt.Fprintf(b, "Affected products: \n")
 
 		for i := range products {
-
 			for j := range products[i].Subcomponents {
 				fmt.Fprintf(b, " - %s\n", products[i].Subcomponents[j].ID)
 			}

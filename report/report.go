@@ -46,7 +46,17 @@ type VulnerabilityMetadata struct {
 type VulnerabilityStatement struct {
 	Metadata        VulnerabilityMetadata `json:"vulnerability"`
 	Status          string                `json:"status"`
+	Products        []Product             `json:"products"`
 	ImpactStatement string                `json:"impact_statement,omitempty"`
+}
+
+type Product struct {
+	ID            string       `json:"@id"`
+	Subcomponents []Components `json:"subcomponents"`
+}
+
+type Components struct {
+	ID string `json:"@id"`
 }
 
 // NewVulnerabilityReport creates a vulnerability report from a govulncheckreport
@@ -157,6 +167,10 @@ func renderResult(b *bytes.Buffer, statement *VulnerabilityStatement, n int) {
 	fmt.Fprintf(b, "%s\n", statement.Metadata.Description)
 	fmt.Fprintf(b, "More info: %s\n", statement.Metadata.ID)
 
+	if statement.Products != nil {
+		renderProducts(b, statement.Products)
+	}
+
 	switch statement.Status {
 	case ResultTypeAffected:
 		b.WriteString(output.ErrorSprintf("Your code is affected by this vulnerability\n"))
@@ -167,6 +181,19 @@ func renderResult(b *bytes.Buffer, statement *VulnerabilityStatement, n int) {
 	default:
 	}
 	b.WriteString("\n")
+}
+
+func renderProducts(b *bytes.Buffer, products []Product) {
+	if len(products) > 0 {
+		fmt.Fprintf(b, "Affected products: \n")
+
+		for i := range products {
+
+			for j := range products[i].Subcomponents {
+				fmt.Fprintf(b, " - %s\n", products[i].Subcomponents[j].ID)
+			}
+		}
+	}
 }
 
 func (v *VulnerabilityReport) renderFailedIgnores(b *bytes.Buffer) {

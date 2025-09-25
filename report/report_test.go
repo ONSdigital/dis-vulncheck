@@ -133,6 +133,16 @@ func TestReportRendering(t *testing.T) {
 						Description: "A description of GO-2025-0001",
 					},
 					Status: "affected",
+					Products: []Product{
+						{
+							ID: "an id",
+							Subcomponents: []Components{
+								{
+									ID: "pkg:golang/stdlib@v1.24.1",
+								},
+							},
+						},
+					},
 				},
 				{
 					Metadata: VulnerabilityMetadata{
@@ -165,6 +175,11 @@ func TestReportRendering(t *testing.T) {
 					So(strings.Contains(reportOutput, vcreport.Statements[i].Metadata.Description), ShouldBeTrue)
 					So(strings.Contains(reportOutput, vcreport.Statements[i].Metadata.ID), ShouldBeTrue)
 					So(strings.Contains(reportOutput, vcreport.Statements[i].Metadata.Name), ShouldBeTrue)
+					for j := range vcreport.Statements[i].Products {
+						for k := range vcreport.Statements[i].Products[j].Subcomponents {
+							So(strings.Contains(reportOutput, vcreport.Statements[i].Products[j].Subcomponents[k].ID), ShouldBeTrue)
+						}
+					}
 				}
 			})
 		})

@@ -11,6 +11,18 @@ import (
 	"github.com/spf13/afero"
 )
 
+const (
+	// The indentation is off here due to the way that yaml deals with whitespace.
+	testBuildFileContent = `
+---
+image_resource:
+  type: docker-image
+  source:
+    repository: golang
+    tag: 1.24.6-bookworm
+`
+)
+
 func TestCliArgs(t *testing.T) {
 	Convey("Given a command with accepted flags set", t, func() {
 		// Save os.Args and restore after test
@@ -117,17 +129,23 @@ toolchain: go1.24.1
 		ctx := context.Background()
 		fs := afero.NewMemMapFs()
 
-		// The indentation is off here due to the way that yaml deals with whitespace.
-		buildFileContent := `
----
-image_resource:
-  type: docker-image
-  source:
-    repository: golang
-    tag: 1.24.6-bookworm
-`
+		afero.WriteFile(fs, "./ci/build.yml", []byte(testBuildFileContent), 0644)
 
-		afero.WriteFile(fs, "./ci/build.yml", []byte(buildFileContent), 0644)
+		Convey("When the config is retrieved", func() {
+			cfg, err := config.Get(ctx, &config.CliArgs{}, fs)
+			So(err, ShouldBeNil)
+
+			Convey("Then the go toolchain should be picked up", func() {
+				So(cfg.GoToolChain, ShouldEqual, "go1.24.6")
+			})
+		})
+	})
+
+	Convey("Given a ci build yaml with a go toolchain declaration", t, func() {
+		ctx := context.Background()
+		fs := afero.NewMemMapFs()
+
+		afero.WriteFile(fs, "./ci/build.yaml", []byte(testBuildFileContent), 0644)
 
 		Convey("When the config is retrieved", func() {
 			cfg, err := config.Get(ctx, &config.CliArgs{}, fs)

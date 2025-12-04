@@ -44,11 +44,14 @@ var (
 		".disvulncheck.yml",
 		".disvulncheck.yaml",
 	}
-	defaultCIBuildFilePath = "./ci/build.yml"
+	ciBuildFileNames []string = []string{
+		"./ci/build.yml",
+		"./ci/build.yaml",
+	}
 )
 
 func getGoToolChain(ctx context.Context, userCfg *UserConfig, fs afero.Fs) string {
-	CIBuildVersion, err := getCIGoBuildVersion(ctx, defaultCIBuildFilePath, fs)
+	CIBuildVersion, err := getCIGoBuildVersion(ctx, ciBuildFileNames, fs)
 	if err != nil {
 		log.Error(ctx, "couldn't load build version from CI files - allowing Go toolchain to default", err)
 	}
@@ -69,7 +72,16 @@ func getGoToolChain(ctx context.Context, userCfg *UserConfig, fs afero.Fs) strin
 	return CIBuildVersion
 }
 
-func getCIGoBuildVersion(ctx context.Context, filepath string, fs afero.Fs) (string, error) {
+func getCIBuildFile(ctx context.Context, filepaths []string, fs afero.Fs) (string, error) {
+	for _, filepath := range filepaths {
+		if _, err := fs.Stat(filepath); err == nil {
+			return filepath, nil
+		}
+	}
+	return "", errors.New("no ci build file found")
+}
+
+func getCIGoBuildVersion(ctx context.Context, filepaths []string, fs afero.Fs) (string, error) {
 	var ciBuild struct {
 		Platform string `yaml:"platform"`
 		ImRes    struct {
@@ -78,6 +90,14 @@ func getCIGoBuildVersion(ctx context.Context, filepath string, fs afero.Fs) (str
 				Tag        string `yaml:"tag"`
 			} `yaml:"source"`
 		} `yaml:"image_resource"`
+	}
+
+	filepath, err := getCIBuildFile(ctx, filepaths, fs)
+	if err != nil {
+		log.Error(ctx, "no ci build file found to get go toolchain from", err, log.Data{
+			"filepaths": filepaths,
+		})
+		return "", err
 	}
 
 	buildBytes, err := afero.ReadFile(fs, filepath)

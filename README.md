@@ -68,7 +68,7 @@ You can use two different flags against dis-vulncheck:
 
 ## What it checks against
 
-By default, dis-vulncheck will inspect the CI build yml (`/ci/build.yml`) to retrieve the version of Go it will be built with.
+By default, dis-vulncheck will inspect the CI build yml (`/ci/build.yml` or `/ci/build.yaml`) to retrieve the version of Go it will be built with.
 
 e.g.
 

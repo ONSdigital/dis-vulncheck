@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dis-vulncheck
 
-go 1.25
+go 1.26
 
 require (
 	github.com/ONSdigital/log.go/v2 v2.5.0

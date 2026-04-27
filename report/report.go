@@ -82,11 +82,22 @@ func (v *VulnerabilityReport) excludeVulnerabilities(ctx context.Context, ignore
 	for i := range v.Statements {
 		for j := range ignores {
 			if ignores[j].ID == v.Statements[i].Metadata.Name {
-				log.Info(ctx, "excluded vulnerabilty", log.Data{
+				log.Info(ctx, "matched vulnterability from config", log.Data{
 					"vulnerabilityID": ignores[j].ID,
 				})
-				v.Statements[i].Status = "ignored"
 				ignores[j].Matched = true
+
+				if time.Now().Before(ignores[j].Expiry) {
+					log.Info(ctx, "excluded vulnerabilty", log.Data{
+						"vulnerabilityID": ignores[j].ID,
+					})
+					v.Statements[i].Status = "ignored"
+				} else {
+					log.Warn(ctx, "ignoring vulnerability that has expired", log.Data{
+						"vulnerabilityID": ignores[j].ID,
+						"expiry":          ignores[j].Expiry,
+					})
+				}
 			}
 		}
 	}

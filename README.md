@@ -39,10 +39,18 @@ ignore:
       id:
         description: "The Go vuln database ID of this vulnerability"
         example: "GO-2025-3563"
+        required: true
         type: string
       reason:
         description: "A reason why this vulnerability has been excluded from auditing"
         example: "This doesn't affect our application"
+        required: true
+        type: string
+      expiry:
+        description: "A date for this exclusion to be expired, in an ISO8601 date only format"
+        format: date
+        example: "2026-04-27"
+        required: true
         type: string
 toolchain:
   description: "An optional toolchain directive to override the default"

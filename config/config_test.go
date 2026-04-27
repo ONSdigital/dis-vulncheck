@@ -5,11 +5,14 @@ import (
 	"flag"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/ONSdigital/dis-vulncheck/config"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/afero"
 )
+
+const testConfigFileName = ".dis-vulncheck.yml"
 
 func TestCliArgs(t *testing.T) {
 	Convey("Given a command with accepted flags set", t, func() {
@@ -55,7 +58,6 @@ func TestCliArgs(t *testing.T) {
 func TestConfig(t *testing.T) {
 	Convey("Given a config file that sets an ignore statement and a go toolchain", t, func() {
 		ctx := context.Background()
-		configFilename := ".dis-vulncheck.yml"
 
 		// The indentation is off here due to the way that yaml deals with whitespace.
 		content := `
@@ -63,20 +65,73 @@ func TestConfig(t *testing.T) {
 ignore:
     - id: GO-2025-3563
       reason: This is a reason why it should be ignored
+      expiry: 2085-01-15
 toolchain: go1.24.1
 `
 		fs := afero.NewMemMapFs()
-		afero.WriteFile(fs, configFilename, []byte(content), 0644)
+		afero.WriteFile(fs, testConfigFileName, []byte(content), 0644)
 
 		Convey("When the config is retrieved", func() {
 			cfg, err := config.Get(ctx, &config.CliArgs{
-				ConfigFilePath: configFilename,
+				ConfigFilePath: testConfigFileName,
 			}, fs)
 			So(err, ShouldBeNil)
 
 			Convey("Then the values should be set as appropriate", func() {
 				So(cfg.GoToolChain, ShouldEqual, "go1.24.1")
-				So(cfg.UserConfig.Ignore[0], ShouldEqual, config.IgnoreStatement{ID: "GO-2025-3563", Reason: "This is a reason why it should be ignored"})
+				So(cfg.UserConfig.Ignore[0], ShouldEqual, config.IgnoreStatement{ID: "GO-2025-3563", Reason: "This is a reason why it should be ignored", Expiry: time.Date(2085, 1, 15, 0, 0, 0, 0, time.UTC)})
+			})
+		})
+	})
+
+	Convey("Given a config file that sets an expiry date", t, func() {
+		ctx := context.Background()
+
+		// The indentation is off here due to the way that yaml deals with whitespace.
+		content := `
+---
+ignore:
+    - id: GO-2025-3563
+      reason: This is a reason why it should be ignored
+      expiry: 2026-04-27
+`
+		fs := afero.NewMemMapFs()
+		afero.WriteFile(fs, testConfigFileName, []byte(content), 0644)
+
+		Convey("When the config is retrieved", func() {
+			cfg, err := config.Get(ctx, &config.CliArgs{
+				ConfigFilePath: testConfigFileName,
+			}, fs)
+			So(err, ShouldBeNil)
+
+			Convey("Then the expiry date should be parsed", func() {
+				expected := time.Date(2026, 4, 27, 0, 0, 0, 0, time.UTC)
+				So(cfg.UserConfig.Ignore[0].Expiry, ShouldEqual, expected)
+			})
+		})
+	})
+
+	Convey("Given a config file with an invalid expiry date", t, func() {
+		ctx := context.Background()
+
+		// The indentation is off here due to the way that yaml deals with whitespace.
+		content := `
+---
+ignore:
+    - id: GO-2025-3563
+      reason: This is a reason why it should be ignored
+      expiry: 2026-13-40
+`
+		fs := afero.NewMemMapFs()
+		afero.WriteFile(fs, testConfigFileName, []byte(content), 0644)
+
+		Convey("When the config is retrieved", func() {
+			_, err := config.Get(ctx, &config.CliArgs{
+				ConfigFilePath: testConfigFileName,
+			}, fs)
+
+			Convey("Then an error should be returned", func() {
+				So(err, ShouldNotBeNil)
 			})
 		})
 	})

@@ -7,11 +7,22 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/ONSdigital/dis-vulncheck/output"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/goccy/go-yaml"
 	"github.com/spf13/afero"
+)
+
+var (
+	configFileNames []string = []string{
+		".dis-vulncheck.yml",
+		".dis-vulncheck.yaml",
+		".disvulncheck.yml",
+		".disvulncheck.yaml",
+	}
+	defaultCIBuildFilePath = "./ci/build.yml"
 )
 
 type CliArgs struct {
@@ -32,20 +43,45 @@ type Config struct {
 }
 
 type IgnoreStatement struct {
-	ID      string `yaml:"id"`
-	Reason  string `yaml:"reason"`
-	Matched bool
+	ID      string    `yaml:"id"`
+	Reason  string    `yaml:"reason"`
+	Expiry  time.Time `yaml:"expiry"`
+	Matched bool      `yaml:"-"`
 }
 
-var (
-	configFileNames []string = []string{
-		".dis-vulncheck.yml",
-		".dis-vulncheck.yaml",
-		".disvulncheck.yml",
-		".disvulncheck.yaml",
+func (i *IgnoreStatement) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var tmp struct {
+		ID     string `yaml:"id"`
+		Reason string `yaml:"reason"`
+		Expiry string `yaml:"expiry"`
 	}
-	defaultCIBuildFilePath = "./ci/build.yml"
-)
+
+	if err := unmarshal(&tmp); err != nil {
+		return err
+	}
+
+	if tmp.Expiry == "" {
+		return fmt.Errorf("no expiry date set for ID %s - this is now mandatory to set", tmp.ID)
+	}
+
+	tmp.ID = strings.TrimSpace(tmp.ID)
+	tmp.Reason = strings.TrimSpace(tmp.Reason)
+	var expiry time.Time
+	if tmp.Expiry != "" {
+		parsed, err := time.Parse("2006-01-02", tmp.Expiry)
+		if err != nil {
+			return fmt.Errorf("invalid expiry date: %w", err)
+		}
+		expiry = parsed
+	}
+
+	*i = IgnoreStatement{
+		ID:     tmp.ID,
+		Reason: tmp.Reason,
+		Expiry: expiry,
+	}
+	return nil
+}
 
 func getGoToolChain(ctx context.Context, userCfg *UserConfig, fs afero.Fs) string {
 	CIBuildVersion, err := getCIGoBuildVersion(ctx, defaultCIBuildFilePath, fs)

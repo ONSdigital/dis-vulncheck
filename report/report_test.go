@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ONSdigital/dis-vulncheck/config"
 	. "github.com/smartystreets/goconvey/convey"
@@ -75,6 +76,7 @@ func TestReportGeneration(t *testing.T) {
 					{
 						ID:     "GO-2025-3749",
 						Reason: "This is a test and I want to test ignoring it",
+						Expiry: time.Now().Add(24 * time.Hour),
 					},
 				},
 			},
@@ -98,6 +100,7 @@ func TestReportGeneration(t *testing.T) {
 					{
 						ID:     "GO-2025-3749",
 						Reason: "This is a test and I want to test failing to ignore it",
+						Expiry: time.Now().Add(24 * time.Hour),
 					},
 				},
 			},
@@ -110,6 +113,43 @@ func TestReportGeneration(t *testing.T) {
 			So(dvulnReport.Results.Failures, ShouldEqual, 0)
 
 			So(dvulnReport.FailedIgnores, ShouldHaveLength, 1)
+		})
+	})
+
+	Convey("Given a govulncheck report with an expired ignore", t, func() {
+		ctx := context.Background()
+
+		gvreport := GoVulncheckReport{
+			Statements: []VulnerabilityStatement{
+				{
+					Metadata: VulnerabilityMetadata{
+						ID:          "https://pkg.go.dev/vuln/GO-2025-3749",
+						Name:        "GO-2025-3749",
+						Description: "Usage of ExtKeyUsageAny disables policy validation in crypto/x509",
+					},
+					ImpactStatement: "a statement about impact",
+					Status:          "affected",
+				},
+			},
+		}
+		cfg := &config.Config{
+			UserConfig: &config.UserConfig{
+				Ignore: []config.IgnoreStatement{
+					{
+						ID:     "GO-2025-3749",
+						Reason: "This is a test and I want to test expiring it",
+						Expiry: time.Now().Add(-24 * time.Hour),
+					},
+				},
+			},
+		}
+		dvulnReport := NewVulnerabilityReport(ctx, cfg, gvreport)
+
+		Convey("Then the vulnerability should not be ignored", func() {
+			So(dvulnReport.Results.Failures, ShouldEqual, 1)
+			So(dvulnReport.Results.Ignored, ShouldEqual, 0)
+			So(dvulnReport.Statements[0].Status, ShouldEqual, "affected")
+			So(dvulnReport.FailedIgnores, ShouldBeEmpty)
 		})
 	})
 }

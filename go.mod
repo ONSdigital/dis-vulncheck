@@ -1,12 +1,12 @@
 module github.com/ONSdigital/dis-vulncheck
 
-go 1.26
+go 1.26.0
 
 require (
-	github.com/ONSdigital/log.go/v2 v2.5.0
+	github.com/ONSdigital/log.go/v2 v2.5.2
 	github.com/briandowns/spinner v1.23.2
-	github.com/fatih/color v1.18.0
-	github.com/goccy/go-yaml v1.18.0
+	github.com/fatih/color v1.19.0
+	github.com/goccy/go-yaml v1.19.2
 	github.com/smartystreets/goconvey v1.8.1
 	github.com/spf13/afero v1.15.0
 )
@@ -26,7 +26,7 @@ require (
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/term v0.1.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 )

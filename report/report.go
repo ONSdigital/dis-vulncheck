@@ -93,7 +93,7 @@ func (v *VulnerabilityReport) excludeVulnerabilities(ctx context.Context, ignore
 					})
 					v.Statements[i].Status = "ignored"
 				} else {
-					log.Warn(ctx, "ignoring vulnerability that has expired", log.Data{
+					log.Warn(ctx, "vulnerability ignore statement has now expired", log.Data{
 						"vulnerabilityID": ignores[j].ID,
 						"expiry":          ignores[j].Expiry,
 					})

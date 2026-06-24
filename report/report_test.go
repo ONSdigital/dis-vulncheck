@@ -10,6 +10,12 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+const (
+	testVulnerabilityName        = "Vulnerability Name"
+	testVulnerabilityDescription = "Vulnerability Description"
+	testImpactStatement          = "a statement about impact"
+)
+
 func TestReportGeneration(t *testing.T) {
 	Convey("Given a govulncheck report supplied with several errors", t, func() {
 		ctx := context.Background()
@@ -19,20 +25,20 @@ func TestReportGeneration(t *testing.T) {
 				{
 					Metadata: VulnerabilityMetadata{
 						ID:          "1",
-						Name:        "Vulnerability Name",
-						Description: "Vulnerability Description",
+						Name:        testVulnerabilityName,
+						Description: testVulnerabilityDescription,
 					},
-					ImpactStatement: "a statement about impact",
+					ImpactStatement: testImpactStatement,
 					Status:          "affected",
 				},
 				{
 					Metadata: VulnerabilityMetadata{
 						ID:          "2",
-						Name:        "Vulnerability Name",
-						Description: "Vulnerability Description",
+						Name:        testVulnerabilityName,
+						Description: testVulnerabilityDescription,
 					},
-					ImpactStatement: "a statement about impact",
-					Status:          "not_affected",
+					ImpactStatement: testImpactStatement,
+					Status:          ResultTypeNotAffected,
 				},
 			},
 		}
@@ -56,8 +62,8 @@ func TestReportGeneration(t *testing.T) {
 						Name:        "GO-2025-3749",
 						Description: "Usage of ExtKeyUsageAny disables policy validation in crypto/x509",
 					},
-					ImpactStatement: "a statement about impact",
-					Status:          "affected",
+					ImpactStatement: testImpactStatement,
+					Status:          ResultTypeAffected,
 				},
 				{
 					Metadata: VulnerabilityMetadata{
@@ -65,8 +71,8 @@ func TestReportGeneration(t *testing.T) {
 						Name:        "GO-2025-3563",
 						Description: "Request smuggling due to acceptance of invalid chunked data in net/http",
 					},
-					ImpactStatement: "a statement about impact",
-					Status:          "not_affected",
+					ImpactStatement: testImpactStatement,
+					Status:          ResultTypeNotAffected,
 				},
 			},
 		}
@@ -86,7 +92,7 @@ func TestReportGeneration(t *testing.T) {
 		Convey("Then the failures should be calculated", func() {
 			So(dvulnReport.Results.NotAffected, ShouldEqual, 1)
 			So(dvulnReport.Results.Ignored, ShouldEqual, 1)
-			So(dvulnReport.Statements[0].Status, ShouldEqual, "ignored")
+			So(dvulnReport.Statements[0].Status, ShouldEqual, ResultTypeIgnored)
 		})
 	})
 
@@ -127,8 +133,8 @@ func TestReportGeneration(t *testing.T) {
 						Name:        "GO-2025-3749",
 						Description: "Usage of ExtKeyUsageAny disables policy validation in crypto/x509",
 					},
-					ImpactStatement: "a statement about impact",
-					Status:          "affected",
+					ImpactStatement: testImpactStatement,
+					Status:          ResultTypeAffected,
 				},
 			},
 		}
@@ -148,7 +154,7 @@ func TestReportGeneration(t *testing.T) {
 		Convey("Then the vulnerability should not be ignored", func() {
 			So(dvulnReport.Results.Failures, ShouldEqual, 1)
 			So(dvulnReport.Results.Ignored, ShouldEqual, 0)
-			So(dvulnReport.Statements[0].Status, ShouldEqual, "affected")
+			So(dvulnReport.Statements[0].Status, ShouldEqual, ResultTypeAffected)
 			So(dvulnReport.FailedIgnores, ShouldBeEmpty)
 		})
 	})
@@ -172,7 +178,7 @@ func TestReportRendering(t *testing.T) {
 						Name:        "GO-2025-0001",
 						Description: "A description of GO-2025-0001",
 					},
-					Status: "affected",
+					Status: ResultTypeAffected,
 					Products: []Product{
 						{
 							ID: "an id",
@@ -190,7 +196,7 @@ func TestReportRendering(t *testing.T) {
 						Name:        "GO-2025-0002",
 						Description: "A description of GO-2025-0002",
 					},
-					Status: "ignored",
+					Status: ResultTypeIgnored,
 				},
 				{
 					Metadata: VulnerabilityMetadata{
@@ -198,7 +204,7 @@ func TestReportRendering(t *testing.T) {
 						Name:        "GO-2025-0003",
 						Description: "A description of GO-2025-0003",
 					},
-					Status: "not_affected",
+					Status: ResultTypeNotAffected,
 				},
 			},
 		}

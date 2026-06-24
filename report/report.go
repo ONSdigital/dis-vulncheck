@@ -14,7 +14,7 @@ import (
 	"github.com/briandowns/spinner"
 )
 
-var (
+const (
 	ResultTypeAffected    = "affected"
 	ResultTypeIgnored     = "ignored"
 	ResultTypeNotAffected = "not_affected"

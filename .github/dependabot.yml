@@ -5,3 +5,12 @@ updates:
     schedule:
       # Check for updates to GitHub Actions every week
       interval: "weekly"
+    groups:
+      gh-actions-security-updates:
+        applies-to: security-updates
+        patterns:
+          - '*'
+      gh-actions-updates:
+        applies-to: version-updates
+        patterns:
+          - '*'

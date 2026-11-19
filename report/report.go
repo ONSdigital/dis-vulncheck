@@ -226,13 +226,10 @@ func Generate(ctx context.Context, cfg *config.Config) (*VulnerabilityReport, er
 // TODO: Abstract this behind a cmd interface for better testing.
 // TODO: Split out the installation command
 func runGoVulncheckReport(ctx context.Context, cfg *config.Config) (GoVulncheckReport, error) {
-	installCmd := "go install golang.org/x/vuln/cmd/govulncheck@latest"
-	if cfg.GoToolChain != "" {
-		installCmd = fmt.Sprintf("env GOTOOLCHAIN=%s %s", cfg.GoToolChain, installCmd)
-	}
+	installCmd := exec.CommandContext(ctx, "go", "install", "golang.org/x/vuln/cmd/govulncheck@latest")
 
 	log.Info(ctx, "installing go vulncheck", log.Data{
-		"installCmd": installCmd,
+		"installCmd": installCmd.String(),
 		"toolchain":  cfg.GoToolChain,
 	})
 
@@ -240,7 +237,7 @@ func runGoVulncheckReport(ctx context.Context, cfg *config.Config) (GoVulncheckR
 	sInstall.Prefix = "Installing govulncheck for toolchain..."
 	sInstall.Start()
 
-	_, err := execCommand(ctx, installCmd, ".")
+	_, err := execCommand(ctx, installCmd, cfg.GoToolChain, ".")
 	if err != nil {
 		sInstall.Stop()
 		log.Error(ctx, "not able to install govulncheck", err)
@@ -252,17 +249,11 @@ func runGoVulncheckReport(ctx context.Context, cfg *config.Config) (GoVulncheckR
 	}
 	sInstall.Stop()
 
-	cmd := "govulncheck"
-
+	args := []string{}
 	if cfg.BuildTags != "" {
-		cmd = fmt.Sprintf("%s -tags=%s", cmd, cfg.BuildTags)
+		args = append(args, "-tags="+cfg.BuildTags)
 	}
-
-	cmd = fmt.Sprintf("%s -format openvex ./...", cmd)
-
-	if cfg.GoToolChain != "" {
-		cmd = fmt.Sprintf("env GOTOOLCHAIN=%s %s", cfg.GoToolChain, cmd)
-	}
+	args = append(args, "-format", "openvex", "./...")
 
 	analysisCtx := ctx
 	if cfg.Timeout > 0 {
@@ -275,7 +266,8 @@ func runGoVulncheckReport(ctx context.Context, cfg *config.Config) (GoVulncheckR
 	s.Prefix = "Analysing code..."
 	s.Start()
 
-	cmdOutput, err := execCommand(analysisCtx, cmd, ".")
+	cmd := exec.CommandContext(analysisCtx, "govulncheck", args...)
+	cmdOutput, err := execCommand(analysisCtx, cmd, cfg.GoToolChain, ".")
 	if err != nil {
 		s.Stop()
 		log.Error(ctx, "not able to run govulncheck", err)
@@ -302,18 +294,17 @@ func runGoVulncheckReport(ctx context.Context, cfg *config.Config) (GoVulncheckR
 	return report, nil
 }
 
-// ExecCommand executes the given command with bash and then returns the result
-// as a byte array
-func execCommand(ctx context.Context, command, wrkDir string) ([]byte, error) {
+// execCommand executes the command with an optional Go toolchain override.
+func execCommand(ctx context.Context, cmd *exec.Cmd, toolchain, wrkDir string) ([]byte, error) {
 	log.Info(ctx, "executing command", log.Data{
-		"command": command,
+		"command": cmd.String(),
 	})
-
-	// Replace bash so cancellation kills the command, not just its shell.
-	cmd := exec.CommandContext(ctx, "bash", "-c", "exec "+command)
 
 	if wrkDir != "" {
 		cmd.Dir = wrkDir
+	}
+	if toolchain != "" {
+		cmd.Env = append(cmd.Environ(), "GOTOOLCHAIN="+toolchain)
 	}
 
 	return cmd.Output()

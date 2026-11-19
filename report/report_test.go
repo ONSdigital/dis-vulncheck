@@ -94,6 +94,55 @@ func TestRunGoVulncheckTimeout(t *testing.T) {
 	}
 }
 
+func TestRunGoVulncheckArguments(t *testing.T) {
+	tests := []struct {
+		name      string
+		toolchain string
+		buildTags string
+	}{
+		{name: "inherited toolchain"},
+		{name: "configured toolchain and tags", toolchain: "go1.26.0", buildTags: "production,integration"},
+		{name: "shell syntax stays literal", toolchain: "go1.26.0; exit 1", buildTags: "production; exit 1"},
+	}
+	for _, tt := range tests {
+		Convey("Given "+tt.name, t, func() {
+			dir := t.TempDir()
+			t.Setenv("COMMAND_OUTPUT", dir)
+			t.Setenv("GOTOOLCHAIN", "inherited")
+			t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+			scripts := map[string]string{
+				"go":          `printf '%s\n' "$GOTOOLCHAIN" "$@" > "$COMMAND_OUTPUT/install"`,
+				"govulncheck": `printf '%s\n' "$GOTOOLCHAIN" "$@" > "$COMMAND_OUTPUT/analysis"` + "\nprintf '{\"statements\":[]}'",
+			}
+			for name, script := range scripts {
+				So(os.WriteFile(filepath.Join(dir, name), []byte("#!/bin/bash\n"+script+"\n"), 0755), ShouldBeNil)
+			}
+
+			_, err := runGoVulncheckReport(context.Background(), &config.Config{
+				GoToolChain: tt.toolchain,
+				BuildTags:   tt.buildTags,
+			})
+			So(err, ShouldBeNil)
+
+			toolchain := tt.toolchain
+			if toolchain == "" {
+				toolchain = "inherited"
+			}
+			install, err := os.ReadFile(filepath.Join(dir, "install"))
+			So(err, ShouldBeNil)
+			So(string(install), ShouldEqual, toolchain+"\ninstall\ngolang.org/x/vuln/cmd/govulncheck@latest\n")
+
+			wantAnalysis := toolchain + "\n"
+			if tt.buildTags != "" {
+				wantAnalysis += "-tags=" + tt.buildTags + "\n"
+			}
+			analysis, err := os.ReadFile(filepath.Join(dir, "analysis"))
+			So(err, ShouldBeNil)
+			So(string(analysis), ShouldEqual, wantAnalysis+"-format\nopenvex\n./...\n")
+		})
+	}
+}
+
 func TestReportGeneration(t *testing.T) {
 	Convey("Given a govulncheck report supplied with several errors", t, func() {
 		ctx := context.Background()

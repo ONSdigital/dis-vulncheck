@@ -14,6 +14,43 @@ import (
 
 const testConfigFileName = ".dis-vulncheck.yml"
 
+func TestConfigTimeout(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    time.Duration
+		wantErr bool
+	}{
+		{name: "a config file without a timeout", content: "{}", want: 30 * time.Second},
+		{name: "a config file with a zero timeout", content: `timeout: "0"`},
+		{name: "a config file with a duration timeout", content: `timeout: "2m30s"`, want: 150 * time.Second},
+		{name: "a config file with an invalid timeout", content: `timeout: "forever"`, wantErr: true},
+		{name: "a config file with a negative timeout", content: `timeout: "-1s"`, wantErr: true},
+	}
+	for _, tt := range tests {
+		Convey("Given "+tt.name, t, func() {
+			fs := afero.NewMemMapFs()
+			So(afero.WriteFile(fs, testConfigFileName, []byte(tt.content), 0644), ShouldBeNil)
+
+			Convey("When the config is retrieved", func() {
+				cfg, err := config.Get(context.Background(), &config.CliArgs{}, fs)
+
+				if tt.wantErr {
+					Convey("Then the invalid timeout should be rejected", func() {
+						So(err, ShouldNotBeNil)
+						So(cfg, ShouldBeNil)
+					})
+				} else {
+					Convey("Then the analysis timeout should be set appropriately", func() {
+						So(err, ShouldBeNil)
+						So(cfg.Timeout, ShouldEqual, tt.want)
+					})
+				}
+			})
+		})
+	}
+}
+
 func TestCliArgs(t *testing.T) {
 	Convey("Given a command with accepted flags set", t, func() {
 		// Save os.Args and restore after test

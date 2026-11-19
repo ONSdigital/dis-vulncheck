@@ -34,12 +34,14 @@ type CliArgs struct {
 type UserConfig struct {
 	Ignore      []IgnoreStatement `yaml:"ignore"`
 	GoToolChain string            `yaml:"toolchain"`
+	Timeout     string            `yaml:"timeout"`
 }
 
 type Config struct {
 	BuildTags   string
 	GoToolChain string
 	UserConfig  *UserConfig
+	Timeout     time.Duration
 }
 
 type IgnoreStatement struct {
@@ -217,12 +219,24 @@ func Get(ctx context.Context, cliArgs *CliArgs, fs afero.Fs) (*Config, error) {
 		return nil, fmt.Errorf("unable to load config: %v", err)
 	}
 
+	timeout := 30 * time.Second
+	if userConfig.Timeout != "" {
+		timeout, err = time.ParseDuration(userConfig.Timeout)
+		if err != nil {
+			return nil, fmt.Errorf("invalid govulncheck timeout: %w", err)
+		}
+		if timeout < 0 {
+			return nil, fmt.Errorf("govulncheck timeout must not be negative")
+		}
+	}
+
 	goToolchain := getGoToolChain(ctx, userConfig, fs)
 
 	cfg := Config{
-		cliArgs.BuildTags,
-		goToolchain,
-		userConfig,
+		BuildTags:   cliArgs.BuildTags,
+		GoToolChain: goToolchain,
+		UserConfig:  userConfig,
+		Timeout:     timeout,
 	}
 
 	log.Info(ctx, "config", log.Data{

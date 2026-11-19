@@ -2,6 +2,9 @@ package report
 
 import (
 	"context"
+	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +18,81 @@ const (
 	testVulnerabilityDescription = "Vulnerability Description"
 	testImpactStatement          = "a statement about impact"
 )
+
+func TestRunGoVulncheckTimeout(t *testing.T) {
+	tests := []struct {
+		name       string
+		timeout    time.Duration
+		install    string
+		analysis   string
+		wantErr    error
+		wantErrMsg string
+	}{
+		{
+			name:     "no analysis timeout",
+			analysis: `printf '{"statements":[{"status":"affected"}]}'`,
+		},
+		{
+			name:     "installation takes longer than the analysis timeout",
+			timeout:  time.Second,
+			install:  "/bin/sleep 1.1",
+			analysis: `printf '{"statements":[{"status":"affected"}]}'`,
+		},
+		{
+			name:     "analysis exceeds its timeout",
+			timeout:  50 * time.Millisecond,
+			analysis: "exec /bin/sleep 5",
+			wantErr:  context.DeadlineExceeded,
+		},
+		{
+			name:       "analysis fails with stderr",
+			analysis:   "echo scan-failed >&2; exit 1",
+			wantErrMsg: "scan-failed",
+		},
+	}
+	for _, tt := range tests {
+		Convey("Given "+tt.name, t, func() {
+			dir := t.TempDir()
+			scripts := map[string]string{
+				"go":          tt.install + "\nexit 0",
+				"govulncheck": tt.analysis,
+			}
+			for name, script := range scripts {
+				script = "#!/bin/bash\n[ \"$GOTOOLCHAIN\" = \"go1.26.0\" ] || exit 2\n" + script + "\n"
+				So(os.WriteFile(filepath.Join(dir, name), []byte(script), 0755), ShouldBeNil)
+			}
+			t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+			Convey("When the govulncheck report is generated", func() {
+				start := time.Now()
+				report, err := runGoVulncheckReport(context.Background(), &config.Config{
+					GoToolChain: "go1.26.0",
+					Timeout:     tt.timeout,
+				})
+				elapsed := time.Since(start)
+
+				switch {
+				case tt.wantErr != nil:
+					Convey("Then analysis should stop promptly with a deadline error", func() {
+						So(errors.Is(err, tt.wantErr), ShouldBeTrue)
+						So(elapsed, ShouldBeLessThan, 2*time.Second)
+					})
+				case tt.wantErrMsg != "":
+					Convey("Then the error should retain stderr", func() {
+						So(err, ShouldNotBeNil)
+						So(err.Error(), ShouldContainSubstring, tt.wantErrMsg)
+					})
+				default:
+					Convey("Then the analysis report should be returned", func() {
+						So(err, ShouldBeNil)
+						So(report.Statements, ShouldHaveLength, 1)
+						So(report.Statements[0].Status, ShouldEqual, ResultTypeAffected)
+					})
+				}
+			})
+		})
+	}
+}
 
 func TestReportGeneration(t *testing.T) {
 	Convey("Given a govulncheck report supplied with several errors", t, func() {

@@ -56,7 +56,17 @@ toolchain:
   description: "An optional toolchain directive to override the default"
   example: "go1.25.0"
   type: string
+timeout:
+  description: "Maximum govulncheck analysis duration; defaults to 30s, 0 disables the timeout"
+  example: "5m"
+  type: string
 ```
+
+Analysis defaults to a 30-second timeout. Set `timeout: "0"` to disable it.
+For example, set `timeout: "5m"` to stop analysis after five minutes. This
+does not limit govulncheck installation. Values use Go duration syntax (such as
+`30s` or `2m30s`); invalid or negative durations are rejected. A timed-out scan
+returns an error.
 
 ## Running
 

@@ -228,7 +228,7 @@ func Generate(ctx context.Context, cfg *config.Config) (*VulnerabilityReport, er
 func runGoVulncheckReport(ctx context.Context, cfg *config.Config) (GoVulncheckReport, error) {
 	installCmd := "go install golang.org/x/vuln/cmd/govulncheck@latest"
 	if cfg.GoToolChain != "" {
-		installCmd = fmt.Sprintf("GOTOOLCHAIN=%s %s", cfg.GoToolChain, installCmd)
+		installCmd = fmt.Sprintf("env GOTOOLCHAIN=%s %s", cfg.GoToolChain, installCmd)
 	}
 
 	log.Info(ctx, "installing go vulncheck", log.Data{
@@ -261,17 +261,27 @@ func runGoVulncheckReport(ctx context.Context, cfg *config.Config) (GoVulncheckR
 	cmd = fmt.Sprintf("%s -format openvex ./...", cmd)
 
 	if cfg.GoToolChain != "" {
-		cmd = fmt.Sprintf("GOTOOLCHAIN=%s %s", cfg.GoToolChain, cmd)
+		cmd = fmt.Sprintf("env GOTOOLCHAIN=%s %s", cfg.GoToolChain, cmd)
+	}
+
+	analysisCtx := ctx
+	if cfg.Timeout > 0 {
+		var cancel context.CancelFunc
+		analysisCtx, cancel = context.WithTimeout(ctx, cfg.Timeout)
+		defer cancel()
 	}
 
 	s := spinner.New(spinner.CharSets[36], 100*time.Millisecond)
 	s.Prefix = "Analysing code..."
 	s.Start()
 
-	cmdOutput, err := execCommand(ctx, cmd, ".")
+	cmdOutput, err := execCommand(analysisCtx, cmd, ".")
 	if err != nil {
 		s.Stop()
 		log.Error(ctx, "not able to run govulncheck", err)
+		if analysisCtx.Err() != nil {
+			return GoVulncheckReport{}, fmt.Errorf("govulncheck analysis stopped: %w", analysisCtx.Err())
+		}
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			return GoVulncheckReport{}, fmt.Errorf("not able to run govulncheck: %v", string(exitErr.Stderr))
 		} else {
@@ -299,7 +309,8 @@ func execCommand(ctx context.Context, command, wrkDir string) ([]byte, error) {
 		"command": command,
 	})
 
-	cmd := exec.Command("bash", "-c", command)
+	// Replace bash so cancellation kills the command, not just its shell.
+	cmd := exec.CommandContext(ctx, "bash", "-c", "exec "+command)
 
 	if wrkDir != "" {
 		cmd.Dir = wrkDir

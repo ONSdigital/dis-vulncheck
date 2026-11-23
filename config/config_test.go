@@ -21,7 +21,7 @@ func TestConfigTimeout(t *testing.T) {
 		want    time.Duration
 		wantErr bool
 	}{
-		{name: "a config file without a timeout", content: "{}", want: 30 * time.Second},
+		{name: "a config file without a timeout", content: "{}", want: 2 * time.Minute},
 		{name: "a config file with a zero timeout", content: `timeout: "0"`},
 		{name: "a config file with a duration timeout", content: `timeout: "2m30s"`, want: 150 * time.Second},
 		{name: "a config file with an invalid timeout", content: `timeout: "forever"`, wantErr: true},

@@ -219,7 +219,7 @@ func Get(ctx context.Context, cliArgs *CliArgs, fs afero.Fs) (*Config, error) {
 		return nil, fmt.Errorf("unable to load config: %v", err)
 	}
 
-	timeout := 30 * time.Second
+	timeout := 2 * time.Minute
 	if userConfig.Timeout != "" {
 		timeout, err = time.ParseDuration(userConfig.Timeout)
 		if err != nil {
